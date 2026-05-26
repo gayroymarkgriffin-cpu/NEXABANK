@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — NexaBank</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/dashboard.css"/>
+</head>
+<body>
+  <div class="loading-overlay" id="loader"><div class="loader"></div></div>
+
+  <div class="app-layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">⬡ NexaBank</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item active"><span>🏠</span> Dashboard</a>
+        <a href="transactions.html" class="nav-item"><span>📋</span> Transactions</a>
+        <a href="#" class="nav-item" onclick="openModal('sendModal')"><span>📤</span> Send Money</a>
+        <a href="#" class="nav-item" onclick="openModal('receiveModal')"><span>📥</span> Receive</a>
+        <a href="profile.html" class="nav-item"><span>👤</span> Profile</a>
+        <a href="#" class="nav-item" onclick="logout()"><span>🚪</span> Logout</a>
+      </nav>
+      <div class="sidebar-card">
+        <small>Total Balance</small>
+        <strong id="sidebarBalance">$0.00</strong>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main-content">
+      <!-- TOP BAR -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+          <div>
+            <h1 id="welcomeMsg">Good morning 👋</h1>
+            <p id="welcomeDate" style="color:var(--gray); font-size:13px;"></p>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="notif-btn">🔔<span class="notif-dot"></span></div>
+          <div class="user-avatar" id="userAvatar">JD</div>
+        </div>
+      </div>
+
+      <!-- BALANCE CARDS -->
+      <div class="cards-row">
+        <div class="balance-card main-balance">
+          <div class="card-label">Total Balance</div>
+          <div class="card-amount" id="totalBalance">$0.00</div>
+          <div class="card-change positive">↑ +2.4% this month</div>
+          <div class="card-actions">
+            <button class="btn-gold" onclick="openModal('sendModal')">Send</button>
+            <button class="btn-outline" onclick="openModal('receiveModal')">Receive</button>
+          </div>
+        </div>
+        <div class="balance-card">
+          <div class="card-label">Income This Month</div>
+          <div class="card-amount income">$4,250.00</div>
+          <div class="card-change positive">↑ +12% vs last month</div>
+          <div class="card-icon">📈</div>
+        </div>
+        <div class="balance-card">
+          <div class="card-label">Expenses This Month</div>
+          <div class="card-amount expense">$1,840.00</div>
+          <div class="card-change negative">↑ +5% vs last month</div>
+          <div class="card-icon">📉</div>
+        </div>
+        <div class="balance-card">
+          <div class="card-label">Savings Goal</div>
+          <div class="card-amount">$10,000</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:62%"></div></div>
+          <small style="color:var(--gray); font-size:12px;">62% achieved</small>
+        </div>
+      </div>
+
+      <!-- QUICK ACTIONS -->
+      <div class="section-title">Quick Actions</div>
+      <div class="quick-actions">
+        <button class="quick-btn" onclick="openModal('sendModal')"><span>📤</span>Send</button>
+        <button class="quick-btn" onclick="openModal('receiveModal')"><span>📥</span>Receive</button>
+        <button class="quick-btn" onclick="window.location.href='transactions.html'"><span>📋</span>History</button>
+        <button class="quick-btn"><span>💳</span>Cards</button>
+        <button class="quick-btn"><span>📱</span>Top Up</button>
+        <button class="quick-btn"><span>🧾</span>Pay Bills</button>
+      </div>
+
+      <!-- RECENT TRANSACTIONS -->
+      <div class="section-title" style="margin-top:32px;">
+        Recent Transactions
+        <a href="transactions.html" style="font-size:13px; color:var(--gold); font-weight:500;">View all →</a>
+      </div>
+      <div class="transactions-list" id="transactionsList"></div>
+    </main>
+  </div>
+
+  <!-- SEND MONEY MODAL -->
+  <div class="modal-overlay" id="sendModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Send Money</h3>
+        <button class="modal-close" onclick="closeModal('sendModal')">✕</button>
+      </div>
+      <div class="form-group">
+        <label>Recipient Email or Account</label>
+        <input type="text" id="sendTo" placeholder="email@example.com"/>
+      </div>
+      <div class="form-group">
+        <label>Amount ($)</label>
+        <input type="number" id="sendAmount" placeholder="0.00" min="1"/>
+      </div>
+      <div class="form-group">
+        <label>Note (optional)</label>
+        <input type="text" id="sendNote" placeholder="e.g. Rent payment"/>
+      </div>
+      <div id="sendError" style="color:var(--danger); font-size:13px; margin-bottom:12px; display:none;"></div>
+      <button class="btn-gold full-btn" onclick="sendMoney()">Send Money →</button>
+    </div>
+  </div>
+
+  <!-- RECEIVE MODAL -->
+  <div class="modal-overlay" id="receiveModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Receive Money</h3>
+        <button class="modal-close" onclick="closeModal('receiveModal')">✕</button>
+      </div>
+      <div style="text-align:center; padding: 20px 0;">
+        <div class="qr-placeholder">📲<br/><small>QR Code</small></div>
+        <p style="color:var(--gray); margin: 16px 0 8px;">Your Account Number</p>
+        <div class="account-number" id="accountNumber">NEXA-000000</div>
+        <button class="btn-outline" style="margin-top:16px;" onclick="copyAccount()">📋 Copy Account Number</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/dashboard.js"></script>
+</body>
+</html>

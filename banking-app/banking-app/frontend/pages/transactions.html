@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Transactions — NexaBank</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/dashboard.css"/>
+  <style>
+    .filters { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:24px; align-items:center; }
+    .filter-select { padding:10px 16px; background:var(--navy-light); border:1px solid rgba(255,255,255,0.08); border-radius:8px; color:var(--white); font-size:14px; outline:none; cursor:pointer; }
+    .filter-select:focus { border-color:var(--gold); }
+    .search-input { flex:1; min-width:200px; padding:10px 16px; background:var(--navy-light); border:1px solid rgba(255,255,255,0.08); border-radius:8px; color:var(--white); font-size:14px; outline:none; }
+    .search-input:focus { border-color:var(--gold); }
+    .search-input::placeholder { color:rgba(255,255,255,0.3); }
+    .tx-badge { padding:4px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+    .tx-badge.credit { background:rgba(56,161,105,0.15); color:#48BB78; }
+    .tx-badge.debit { background:rgba(229,62,62,0.12); color:#FC8181; }
+    .empty-state { text-align:center; padding:60px 20px; color:var(--gray); }
+    .empty-state .emoji { font-size:48px; margin-bottom:16px; }
+    .summary-bar { display:flex; gap:20px; flex-wrap:wrap; margin-bottom:28px; }
+    .summary-item { background:var(--navy-light); border:1px solid rgba(255,255,255,0.06); border-radius:12px; padding:16px 24px; flex:1; min-width:140px; }
+    .summary-item small { color:var(--gray); font-size:12px; display:block; margin-bottom:6px; }
+    .summary-item strong { font-size:20px; font-weight:800; }
+  </style>
+</head>
+<body>
+  <div class="loading-overlay" id="loader"><div class="loader"></div></div>
+
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">⬡ NexaBank</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item"><span>🏠</span> Dashboard</a>
+        <a href="transactions.html" class="nav-item active"><span>📋</span> Transactions</a>
+        <a href="dashboard.html" class="nav-item"><span>📤</span> Send Money</a>
+        <a href="dashboard.html" class="nav-item"><span>📥</span> Receive</a>
+        <a href="profile.html" class="nav-item"><span>👤</span> Profile</a>
+        <a href="#" class="nav-item" onclick="logout()"><span>🚪</span> Logout</a>
+      </nav>
+      <div class="sidebar-card">
+        <small>Total Balance</small>
+        <strong id="sidebarBalance">$0.00</strong>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+          <h1>Transaction History</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="user-avatar" id="userAvatar">JD</div>
+        </div>
+      </div>
+
+      <!-- SUMMARY -->
+      <div class="summary-bar">
+        <div class="summary-item"><small>Total Income</small><strong style="color:#48BB78;" id="totalIncome">$0.00</strong></div>
+        <div class="summary-item"><small>Total Expenses</small><strong style="color:#FC8181;" id="totalExpense">$0.00</strong></div>
+        <div class="summary-item"><small>Transactions</small><strong id="totalCount">0</strong></div>
+        <div class="summary-item"><small>Net Flow</small><strong id="netFlow">$0.00</strong></div>
+      </div>
+
+      <!-- FILTERS -->
+      <div class="filters">
+        <input class="search-input" type="text" id="searchInput" placeholder="🔍 Search transactions..." oninput="filterTransactions()"/>
+        <select class="filter-select" id="typeFilter" onchange="filterTransactions()">
+          <option value="all">All Types</option>
+          <option value="credit">Income</option>
+          <option value="debit">Expenses</option>
+        </select>
+        <select class="filter-select" id="periodFilter" onchange="filterTransactions()">
+          <option value="all">All Time</option>
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+        <button class="btn-outline" style="padding:10px 20px; font-size:14px;" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+
+      <div class="transactions-list" id="transactionsList"></div>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <div class="emoji">🔍</div>
+        <p>No transactions found</p>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/dashboard.js"></script>
+  <script>
+    function filterTransactions() {
+      const search = document.getElementById('searchInput').value.toLowerCase();
+      const type = document.getElementById('typeFilter').value;
+      const period = parseInt(document.getElementById('periodFilter').value);
+      const transactions = getTransactions();
+
+      const now = new Date();
+      const filtered = transactions.filter(tx => {
+        const matchSearch = tx.name.toLowerCase().includes(search) || tx.note?.toLowerCase().includes(search);
+        const matchType = type === 'all' || tx.type === type;
+        const txDate = new Date(tx.date);
+        const matchPeriod = isNaN(period) || (now - txDate) / (1000*60*60*24) <= period;
+        return matchSearch && matchType && matchPeriod;
+      });
+
+      renderTransactions(filtered, 'transactionsList');
+
+      const income = filtered.filter(t=>t.type==='credit').reduce((s,t)=>s+t.amount,0);
+      const expense = filtered.filter(t=>t.type==='debit').reduce((s,t)=>s+t.amount,0);
+      document.getElementById('totalIncome').textContent = '$'+income.toFixed(2);
+      document.getElementById('totalExpense').textContent = '$'+expense.toFixed(2);
+      document.getElementById('totalCount').textContent = filtered.length;
+      const net = income - expense;
+      const netEl = document.getElementById('netFlow');
+      netEl.textContent = (net>=0?'+':'') + '$'+Math.abs(net).toFixed(2);
+      netEl.style.color = net >= 0 ? '#48BB78' : '#FC8181';
+
+      document.getElementById('emptyState').style.display = filtered.length ? 'none' : 'block';
+    }
+
+    function exportCSV() {
+      const transactions = getTransactions();
+      const rows = [['Date','Name','Type','Amount','Note']];
+      transactions.forEach(tx => {
+        rows.push([new Date(tx.date).toLocaleDateString(), tx.name, tx.type, tx.amount.toFixed(2), tx.note||'']);
+      });
+      const csv = rows.map(r => r.join(',')).join('\n');
+      const a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+      a.download = 'nexabank_transactions.csv';
+      a.click();
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(() => document.getElementById('loader').classList.add('hidden'), 400);
+      filterTransactions();
+    });
+  </script>
+</body>
+</html>

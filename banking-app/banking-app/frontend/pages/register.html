@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register — NexaBank</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/auth.css"/>
+</head>
+<body>
+  <div class="loading-overlay" id="loader"><div class="loader"></div></div>
+
+  <div class="auth-page">
+    <div class="auth-left">
+      <a href="../index.html" class="auth-logo">⬡ NexaBank</a>
+      <h2>Join NexaBank</h2>
+      <p>Open your free account in under 2 minutes and start banking smarter today.</p>
+      <div class="auth-features">
+        <div class="auth-feat"><span>✅</span> No monthly fees</div>
+        <div class="auth-feat"><span>💳</span> Free virtual card</div>
+        <div class="auth-feat"><span>🎁</span> $50 welcome bonus</div>
+      </div>
+    </div>
+
+    <div class="auth-right">
+      <div class="auth-card">
+        <h3>Create Account</h3>
+        <p class="auth-sub">Already have an account? <a href="login.html">Sign in</a></p>
+
+        <div id="regError" class="error-msg" style="display:none; background:rgba(229,62,62,0.1); padding:12px 16px; border-radius:8px; border-left:3px solid var(--danger); margin-bottom:16px;"></div>
+        <div id="regSuccess" style="display:none; background:rgba(56,161,105,0.1); padding:12px 16px; border-radius:8px; border-left:3px solid var(--success); margin-bottom:16px; color:var(--success);"></div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+          <div class="form-group">
+            <label>First Name</label>
+            <input type="text" id="firstName" placeholder="John"/>
+            <span class="error-msg" id="firstErr">Required</span>
+          </div>
+          <div class="form-group">
+            <label>Last Name</label>
+            <input type="text" id="lastName" placeholder="Doe"/>
+            <span class="error-msg" id="lastErr">Required</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="email" placeholder="john@example.com"/>
+          <span class="error-msg" id="emailErr">Enter a valid email</span>
+        </div>
+
+        <div class="form-group">
+          <label>Phone Number</label>
+          <input type="tel" id="phone" placeholder="+237 6XX XXX XXX"/>
+        </div>
+
+        <div class="form-group">
+          <label>Password</label>
+          <div class="password-wrap">
+            <input type="password" id="password" placeholder="Min 8 characters" oninput="checkStrength()"/>
+            <button class="toggle-pass" onclick="togglePass('password')">👁</button>
+          </div>
+          <div class="strength-bar"><div class="strength-fill" id="strengthFill"></div></div>
+          <span class="strength-label" id="strengthLabel"></span>
+          <span class="error-msg" id="passErr">Min 8 characters required</span>
+        </div>
+
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <div class="password-wrap">
+            <input type="password" id="confirm" placeholder="Repeat password"/>
+            <button class="toggle-pass" onclick="togglePass('confirm')">👁</button>
+          </div>
+          <span class="error-msg" id="confirmErr">Passwords do not match</span>
+        </div>
+
+        <div class="form-group">
+          <label class="checkbox-label">
+            <input type="checkbox" id="terms"/>
+            I agree to the <a href="#" style="color:var(--gold);">Terms of Service</a> and <a href="#" style="color:var(--gold);">Privacy Policy</a>
+          </label>
+          <span class="error-msg" id="termsErr">You must agree to continue</span>
+        </div>
+
+        <button class="btn-gold full-btn" onclick="handleRegister()">Create Account →</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => document.getElementById('loader').classList.add('hidden'), 400);
+    });
+
+    function checkStrength() {
+      const pass = document.getElementById('password').value;
+      const fill = document.getElementById('strengthFill');
+      const label = document.getElementById('strengthLabel');
+      let strength = 0;
+      if (pass.length >= 8) strength++;
+      if (/[A-Z]/.test(pass)) strength++;
+      if (/[0-9]/.test(pass)) strength++;
+      if (/[^A-Za-z0-9]/.test(pass)) strength++;
+
+      const levels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+      const colors = ['', '#E53E3E', '#D69E2E', '#3182CE', '#38A169'];
+      const widths = ['0%', '25%', '50%', '75%', '100%'];
+
+      fill.style.width = widths[strength];
+      fill.style.background = colors[strength];
+      label.textContent = levels[strength];
+      label.style.color = colors[strength];
+    }
+
+    function handleRegister() {
+      const firstName = document.getElementById('firstName').value.trim();
+      const lastName = document.getElementById('lastName').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirm = document.getElementById('confirm').value;
+      const terms = document.getElementById('terms').checked;
+
+      // Clear errors
+      ['firstErr','lastErr','emailErr','passErr','confirmErr','termsErr'].forEach(id => {
+        document.getElementById(id).style.display = 'none';
+      });
+      document.getElementById('regError').style.display = 'none';
+
+      let valid = true;
+      if (!firstName) { document.getElementById('firstErr').style.display = 'block'; valid = false; }
+      if (!lastName) { document.getElementById('lastErr').style.display = 'block'; valid = false; }
+      if (!email || !email.includes('@')) { document.getElementById('emailErr').style.display = 'block'; valid = false; }
+      if (password.length < 8) { document.getElementById('passErr').style.display = 'block'; valid = false; }
+      if (password !== confirm) { document.getElementById('confirmErr').style.display = 'block'; valid = false; }
+      if (!terms) { document.getElementById('termsErr').style.display = 'block'; valid = false; }
+      if (!valid) return;
+
+      const btn = document.querySelector('.btn-gold.full-btn');
+      btn.textContent = 'Creating account...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        const users = JSON.parse(localStorage.getItem('nexabank_users') || '[]');
+        if (users.find(u => u.email === email)) {
+          const err = document.getElementById('regError');
+          err.textContent = 'An account with this email already exists.';
+          err.style.display = 'block';
+          btn.textContent = 'Create Account →';
+          btn.disabled = false;
+          return;
+        }
+
+        const newUser = {
+          id: 'usr_' + Date.now(),
+          name: firstName + ' ' + lastName,
+          email,
+          phone: document.getElementById('phone').value,
+          password: btoa(password),
+          balance: 5000.00,
+          joined: new Date().toISOString()
+        };
+
+        users.push(newUser);
+        localStorage.setItem('nexabank_users', JSON.stringify(users));
+        localStorage.setItem('nexabank_session', JSON.stringify(newUser));
+
+        const success = document.getElementById('regSuccess');
+        success.textContent = '🎉 Account created! Redirecting to dashboard...';
+        success.style.display = 'block';
+
+        setTimeout(() => window.location.href = 'dashboard.html', 1500);
+      }, 1200);
+    }
+  </script>
+</body>
+</html>

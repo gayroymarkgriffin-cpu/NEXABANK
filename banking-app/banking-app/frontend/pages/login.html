@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — NexaBank</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/auth.css"/>
+</head>
+<body>
+  <div class="loading-overlay" id="loader"><div class="loader"></div></div>
+
+  <div class="auth-page">
+    <div class="auth-left">
+      <a href="../index.html" class="auth-logo">⬡ NexaBank</a>
+      <h2>Welcome Back</h2>
+      <p>Sign in to access your account and manage your finances securely.</p>
+      <div class="auth-features">
+        <div class="auth-feat"><span>🔒</span> 256-bit encryption</div>
+        <div class="auth-feat"><span>⚡</span> Real-time transactions</div>
+        <div class="auth-feat"><span>🌍</span> Available worldwide</div>
+      </div>
+    </div>
+
+    <div class="auth-right">
+      <div class="auth-card">
+        <h3>Sign In</h3>
+        <p class="auth-sub">Don't have an account? <a href="register.html">Create one free</a></p>
+
+        <div id="loginError" class="error-msg" style="display:none; background: rgba(229,62,62,0.1); padding: 12px 16px; border-radius: 8px; border-left: 3px solid var(--danger); margin-bottom: 16px;"></div>
+
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="email" placeholder="john@example.com"/>
+          <span class="error-msg" id="emailErr">Please enter a valid email</span>
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <div class="password-wrap">
+            <input type="password" id="password" placeholder="Enter your password"/>
+            <button class="toggle-pass" onclick="togglePass('password')">👁</button>
+          </div>
+          <span class="error-msg" id="passErr">Password is required</span>
+        </div>
+
+        <div class="form-row">
+          <label class="checkbox-label">
+            <input type="checkbox" id="remember"/> Remember me
+          </label>
+          <a href="#" class="forgot-link">Forgot password?</a>
+        </div>
+
+        <button class="btn-gold full-btn" onclick="handleLogin()">Sign In →</button>
+
+        <div class="divider"><span>or try demo</span></div>
+        <button class="btn-outline full-btn" onclick="demoLogin()">Use Demo Account</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script>
+    // Hide loader after page load
+    window.addEventListener('load', () => {
+      setTimeout(() => document.getElementById('loader').classList.add('hidden'), 400);
+    });
+
+    function handleLogin() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      let valid = true;
+
+      document.getElementById('emailErr').style.display = 'none';
+      document.getElementById('passErr').style.display = 'none';
+      document.getElementById('loginError').style.display = 'none';
+
+      if (!email || !email.includes('@')) {
+        document.getElementById('emailErr').style.display = 'block';
+        valid = false;
+      }
+      if (!password) {
+        document.getElementById('passErr').style.display = 'block';
+        valid = false;
+      }
+      if (!valid) return;
+
+      // Show loading state
+      const btn = document.querySelector('.btn-gold.full-btn');
+      btn.textContent = 'Signing in...';
+      btn.disabled = true;
+
+      // Simulate API call
+      setTimeout(() => {
+        const users = JSON.parse(localStorage.getItem('nexabank_users') || '[]');
+        const user = users.find(u => u.email === email && u.password === btoa(password));
+
+        if (user || (email === 'demo@nexabank.com' && password === 'demo1234')) {
+          const sessionUser = user || { name: 'John Doe', email: 'demo@nexabank.com', id: 'demo_001' };
+          localStorage.setItem('nexabank_session', JSON.stringify(sessionUser));
+          window.location.href = 'dashboard.html';
+        } else {
+          const errEl = document.getElementById('loginError');
+          errEl.textContent = 'Invalid email or password. Try demo@nexabank.com / demo1234';
+          errEl.style.display = 'block';
+          btn.textContent = 'Sign In →';
+          btn.disabled = false;
+        }
+      }, 1000);
+    }
+
+    function demoLogin() {
+      document.getElementById('email').value = 'demo@nexabank.com';
+      document.getElementById('password').value = 'demo1234';
+      handleLogin();
+    }
+  </script>
+</body>
+</html>
