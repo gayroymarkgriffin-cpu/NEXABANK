@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Setup — NexaBank</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/auth.css"/>
+  <style>
+    .setup-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--navy);
+    }
+    .setup-card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--navy-light);
+      border: 1px solid rgba(212,175,55,0.2);
+      border-radius: 20px;
+      padding: 40px;
+      animation: fadeUp 0.5s ease;
+    }
+    .setup-icon {
+      width: 64px; height: 64px;
+      background: rgba(212,175,55,0.1);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      margin: 0 auto 20px;
+    }
+    .setup-card h2 { text-align:center; font-size:22px; font-weight:800; margin-bottom:6px; }
+    .setup-card > p { text-align:center; color:var(--gray); font-size:14px; margin-bottom:28px; }
+    .warning-box {
+      background: rgba(214,158,46,0.1);
+      border: 1px solid rgba(214,158,46,0.3);
+      border-radius:10px;
+      padding:14px 16px;
+      font-size:13px;
+      color: #ECC94B;
+      margin-bottom:24px;
+      line-height:1.6;
+    }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(20px); }
+      to { opacity:1; transform:translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading-overlay" id="loader"><div class="loader"></div></div>
+
+  <div class="setup-wrap">
+    <div class="setup-card">
+      <div class="setup-icon">⚙️</div>
+      <h2>Admin Setup</h2>
+      <p>Create your admin account. Do this only once.</p>
+
+      <div class="warning-box">
+        ⚠️ <strong>Important:</strong> After creating your admin account, delete this file (<code>admin-setup.html</code>) from your GitHub repo so nobody else can access it.
+      </div>
+
+      <div id="setupError" style="display:none; background:rgba(229,62,62,0.1); padding:12px 16px; border-radius:8px; border-left:3px solid var(--danger); margin-bottom:16px; font-size:13px; color:#FC8181;"></div>
+      <div id="setupSuccess" style="display:none; background:rgba(56,161,105,0.1); padding:12px 16px; border-radius:8px; border-left:3px solid var(--success); margin-bottom:16px; font-size:13px; color:#48BB78;"></div>
+
+      <div class="form-group">
+        <label>Your Full Name</label>
+        <input type="text" id="name" placeholder="e.g. Bank Admin"/>
+      </div>
+
+      <div class="form-group">
+        <label>Admin Email</label>
+        <input type="email" id="email" placeholder="admin@yourbank.com"/>
+      </div>
+
+      <div class="form-group">
+        <label>Admin Password</label>
+        <div class="password-wrap">
+          <input type="password" id="password" placeholder="Min 8 characters — make it strong!"/>
+          <button class="toggle-pass" onclick="togglePass('password')">👁</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <div class="password-wrap">
+          <input type="password" id="confirm" placeholder="Repeat password"/>
+          <button class="toggle-pass" onclick="togglePass('confirm')">👁</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Setup Secret Key</label>
+        <input type="password" id="secretKey" placeholder="Enter: NEXAADMIN2025"/>
+        <small style="color:var(--gray); font-size:12px; margin-top:6px; display:block;">This prevents anyone else from creating an admin account. Change it in the code before deploying.</small>
+      </div>
+
+      <button class="btn-gold full-btn" onclick="createAdmin()">Create Admin Account →</button>
+
+      <p style="text-align:center; margin-top:16px; font-size:13px; color:var(--gray);">
+        Already set up? <a href="admin-login.html" style="color:var(--gold);">Go to Admin Login</a>
+      </p>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script>
+    const SETUP_SECRET = 'NEXAADMIN2025'; // Change this before deploying!
+
+    window.addEventListener('load', () => {
+      setTimeout(() => document.getElementById('loader').classList.add('hidden'), 400);
+    });
+
+    function createAdmin() {
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const confirm = document.getElementById('confirm').value;
+      const secretKey = document.getElementById('secretKey').value;
+
+      document.getElementById('setupError').style.display = 'none';
+      document.getElementById('setupSuccess').style.display = 'none';
+
+      const err = document.getElementById('setupError');
+
+      if (!name || !email || !password) { err.textContent = '⚠️ All fields are required'; err.style.display = 'block'; return; }
+      if (!email.includes('@')) { err.textContent = '⚠️ Enter a valid email'; err.style.display = 'block'; return; }
+      if (password.length < 8) { err.textContent = '⚠️ Password must be at least 8 characters'; err.style.display = 'block'; return; }
+      if (password !== confirm) { err.textContent = '⚠️ Passwords do not match'; err.style.display = 'block'; return; }
+      if (secretKey !== SETUP_SECRET) { err.textContent = '❌ Wrong setup secret key'; err.style.display = 'block'; return; }
+
+      const btn = document.querySelector('.btn-gold.full-btn');
+      btn.textContent = 'Creating...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        // Check if admin already exists
+        const existing = localStorage.getItem('nexabank_admin');
+        if (existing) {
+          err.textContent = '⚠️ An admin account already exists. Delete localStorage to reset.';
+          err.style.display = 'block';
+          btn.textContent = 'Create Admin Account →';
+          btn.disabled = false;
+          return;
+        }
+
+        const adminData = {
+          id: 'admin_' + Date.now(),
+          name,
+          email,
+          password: btoa(password),
+          is_admin: true,
+          joined: new Date().toISOString()
+        };
+
+        // Save admin separately
+        localStorage.setItem('nexabank_admin', JSON.stringify(adminData));
+
+        // Also add to users list with admin flag
+        const users = JSON.parse(localStorage.getItem('nexabank_users') || '[]');
+        users.unshift(adminData);
+        localStorage.setItem('nexabank_users', JSON.stringify(users));
+
+        const success = document.getElementById('setupSuccess');
+        success.innerHTML = `✅ Admin account created for <strong>${email}</strong>!<br/>Now go to <a href="admin-login.html" style="color:var(--gold);">Admin Login</a> and sign in.<br/><br/>⚠️ Remember to delete <code>admin-setup.html</code> from GitHub!`;
+        success.style.display = 'block';
+        btn.textContent = 'Done! →';
+      }, 800);
+    }
+  </script>
+</body>
+</html>

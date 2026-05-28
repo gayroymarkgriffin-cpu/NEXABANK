@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Login — NexaBank</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/auth.css"/>
+  <style>
+    .admin-login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--navy);
+      position: relative;
+      overflow: hidden;
+    }
+    .admin-login-wrap::before {
+      content: '';
+      position: absolute;
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, rgba(229,62,62,0.06), transparent);
+      top: -100px; right: -100px;
+      border-radius: 50%;
+    }
+    .admin-login-wrap::after {
+      content: '';
+      position: absolute;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(212,175,55,0.05), transparent);
+      bottom: -100px; left: -100px;
+      border-radius: 50%;
+    }
+    .admin-card {
+      width: 100%;
+      max-width: 420px;
+      background: var(--navy-light);
+      border: 1px solid rgba(229,62,62,0.2);
+      border-radius: 20px;
+      padding: 40px;
+      position: relative;
+      z-index: 1;
+      animation: fadeUp 0.5s ease;
+    }
+    .admin-icon {
+      width: 64px; height: 64px;
+      background: rgba(229,62,62,0.12);
+      border: 2px solid rgba(229,62,62,0.3);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px;
+      margin: 0 auto 20px;
+    }
+    .admin-card h2 {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 800;
+      margin-bottom: 6px;
+    }
+    .admin-card p {
+      text-align: center;
+      color: var(--gray);
+      font-size: 14px;
+      margin-bottom: 28px;
+    }
+    .admin-badge-top {
+      display: inline-block;
+      background: rgba(229,62,62,0.12);
+      border: 1px solid rgba(229,62,62,0.3);
+      color: #FC8181;
+      padding: 3px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin: 0 auto 16px;
+      display: block;
+      width: fit-content;
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: 20px;
+      color: var(--gray);
+      font-size: 14px;
+    }
+    .back-link a { color: var(--gold); }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading-overlay" id="loader"><div class="loader"></div></div>
+
+  <div class="admin-login-wrap">
+    <div class="admin-card">
+      <div class="admin-icon">🔐</div>
+      <span class="admin-badge-top">Admin Access Only</span>
+      <h2>Admin Panel</h2>
+      <p>Sign in with your admin credentials to access the control panel.</p>
+
+      <div id="loginError" style="display:none; background:rgba(229,62,62,0.1); padding:12px 16px; border-radius:8px; border-left:3px solid var(--danger); margin-bottom:16px; font-size:13px; color:#FC8181;"></div>
+
+      <div class="form-group">
+        <label>Admin Email</label>
+        <input type="email" id="email" placeholder="admin@nexabank.com"/>
+        <span class="error-msg" id="emailErr">Enter a valid email</span>
+      </div>
+
+      <div class="form-group">
+        <label>Admin Password</label>
+        <div class="password-wrap">
+          <input type="password" id="password" placeholder="Admin password" onkeydown="if(event.key==='Enter') handleAdminLogin()"/>
+          <button class="toggle-pass" onclick="togglePass('password')">👁</button>
+        </div>
+        <span class="error-msg" id="passErr">Password is required</span>
+      </div>
+
+      <button class="btn-gold full-btn" style="margin-top:8px;" onclick="handleAdminLogin()">Access Admin Panel →</button>
+
+      <p class="back-link">Not an admin? <a href="login.html">Go to regular login</a></p>
+    </div>
+  </div>
+
+  <script src="../js/auth.js"></script>
+  <script>
+    window.addEventListener('load', () => {
+      setTimeout(() => document.getElementById('loader').classList.add('hidden'), 400);
+
+      // If already logged in as admin, redirect
+      const session = JSON.parse(localStorage.getItem('nexabank_session') || 'null');
+      if (session?.is_admin) window.location.href = 'admin.html';
+    });
+
+    function handleAdminLogin() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      document.getElementById('emailErr').style.display = 'none';
+      document.getElementById('passErr').style.display = 'none';
+      document.getElementById('loginError').style.display = 'none';
+
+      let valid = true;
+      if (!email || !email.includes('@')) { document.getElementById('emailErr').style.display = 'block'; valid = false; }
+      if (!password) { document.getElementById('passErr').style.display = 'block'; valid = false; }
+      if (!valid) return;
+
+      const btn = document.querySelector('.btn-gold.full-btn');
+      btn.textContent = 'Verifying...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        // Check against stored admin accounts
+        const users = JSON.parse(localStorage.getItem('nexabank_users') || '[]');
+        const admin = users.find(u => u.email === email && u.is_admin && u.password === btoa(password));
+
+        // Also check default admin
+        const defaultAdmin = localStorage.getItem('nexabank_admin');
+        const parsedAdmin = defaultAdmin ? JSON.parse(defaultAdmin) : null;
+        const isDefault = parsedAdmin && parsedAdmin.email === email && parsedAdmin.password === btoa(password);
+
+        if (admin || isDefault) {
+          const adminUser = admin || parsedAdmin;
+          localStorage.setItem('nexabank_session', JSON.stringify({
+            ...adminUser,
+            is_admin: true
+          }));
+          window.location.href = 'admin.html';
+        } else {
+          const err = document.getElementById('loginError');
+          err.textContent = '❌ Invalid admin credentials. Check your email and password.';
+          err.style.display = 'block';
+          btn.textContent = 'Access Admin Panel →';
+          btn.disabled = false;
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>
