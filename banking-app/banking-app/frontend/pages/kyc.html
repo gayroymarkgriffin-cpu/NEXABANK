@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>KYC Verification — NexaBank</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/dashboard.css"/>
+  <style>
+    .kyc-wrap { max-width: 620px; margin: 0 auto; }
+    .kyc-status-card { border-radius: 16px; padding: 28px; margin-bottom: 24px; display: flex; align-items: center; gap: 20px; }
+    .kyc-status-card.pending { background: rgba(214,158,46,0.08); border: 1px solid rgba(214,158,46,0.25); }
+    .kyc-status-card.submitted { background: rgba(49,130,206,0.08); border: 1px solid rgba(49,130,206,0.25); }
+    .kyc-status-card.approved { background: rgba(56,161,105,0.08); border: 1px solid rgba(56,161,105,0.25); }
+    .kyc-status-card.rejected { background: rgba(229,62,62,0.08); border: 1px solid rgba(229,62,62,0.25); }
+    .kyc-status-icon { font-size: 40px; flex-shrink: 0; }
+    .kyc-status-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+    .kyc-status-card p { color: var(--gray); font-size: 14px; margin: 0; }
+
+    .upload-zone {
+      border: 2px dashed rgba(212,175,55,0.3);
+      border-radius: 16px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: rgba(212,175,55,0.02);
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--gold);
+      background: rgba(212,175,55,0.05);
+    }
+    .upload-zone .upload-icon { font-size: 48px; margin-bottom: 16px; }
+    .upload-zone h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+    .upload-zone p { color: var(--gray); font-size: 14px; margin-bottom: 20px; }
+
+    .doc-types { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+    .doc-type-btn {
+      padding: 16px; border-radius: 12px;
+      border: 2px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02);
+      cursor: pointer; text-align: center;
+      transition: all 0.2s; color: var(--white);
+    }
+    .doc-type-btn:hover { border-color: rgba(212,175,55,0.3); }
+    .doc-type-btn.selected { border-color: var(--gold); background: rgba(212,175,55,0.08); }
+    .doc-type-btn .doc-icon { font-size: 28px; margin-bottom: 8px; }
+    .doc-type-btn span { display: block; font-size: 13px; font-weight: 600; }
+
+    .preview-img { width: 100%; border-radius: 12px; margin: 16px 0; max-height: 200px; object-fit: cover; border: 1px solid rgba(255,255,255,0.08); }
+
+    .steps { display: flex; gap: 0; margin-bottom: 32px; }
+    .step { flex: 1; text-align: center; position: relative; }
+    .step::after { content: ''; position: absolute; top: 16px; left: 50%; width: 100%; height: 2px; background: rgba(255,255,255,0.08); z-index: 0; }
+    .step:last-child::after { display: none; }
+    .step-circle { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; margin: 0 auto 8px; position: relative; z-index: 1; }
+    .step.active .step-circle { background: var(--gold); color: var(--navy); }
+    .step.done .step-circle { background: #38A169; color: white; }
+    .step-label { font-size: 11px; color: var(--gray); }
+    .step.active .step-label { color: var(--gold); }
+  </style>
+</head>
+<body>
+  <div class="loading-overlay" id="loader"><div class="loader"></div></div>
+
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">⬡ NexaBank</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item"><span>🏠</span> Dashboard</a>
+        <a href="transactions.html" class="nav-item"><span>📋</span> Transactions</a>
+        <a href="mobilemoney.html" class="nav-item"><span>📱</span> Mobile Money</a>
+        <a href="kyc.html" class="nav-item active"><span>🪪</span> KYC Verify</a>
+        <a href="profile.html" class="nav-item"><span>👤</span> Profile</a>
+        <a href="#" class="nav-item" onclick="logout()"><span>🚪</span> Logout</a>
+      </nav>
+      <div class="sidebar-card">
+        <small>Total Balance</small>
+        <strong id="sidebarBalance">$0.00</strong>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+          <div>
+            <h1>KYC Verification</h1>
+            <p style="color:var(--gray); font-size:13px;">Verify your identity to unlock all features</p>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="user-avatar" id="userAvatar">JD</div>
+        </div>
+      </div>
+
+      <div class="kyc-wrap">
+        <!-- STATUS CARD -->
+        <div id="kycStatusCard" class="kyc-status-card pending">
+          <div class="kyc-status-icon" id="kycStatusIcon">⏳</div>
+          <div>
+            <h3 id="kycStatusTitle">Verification Pending</h3>
+            <p id="kycStatusDesc">Upload a valid ID document to verify your identity and unlock all features.</p>
+          </div>
+        </div>
+
+        <!-- STEPS -->
+        <div class="steps">
+          <div class="step done" id="step1">
+            <div class="step-circle">✓</div>
+            <div class="step-label">Register</div>
+          </div>
+          <div class="step active" id="step2">
+            <div class="step-circle">2</div>
+            <div class="step-label">Upload ID</div>
+          </div>
+          <div class="step" id="step3">
+            <div class="step-circle">3</div>
+            <div class="step-label">Review</div>
+          </div>
+          <div class="step" id="step4">
+            <div class="step-circle">4</div>
+            <div class="step-label">Approved</div>
+          </div>
+        </div>
+
+        <!-- UPLOAD FORM -->
+        <div id="uploadSection">
+          <div class="section-title" style="margin-bottom:16px;">Select Document Type</div>
+          <div class="doc-types">
+            <button class="doc-type-btn selected" onclick="selectDoc('national_id', this)">
+              <div class="doc-icon">🪪</div>
+              <span>National ID Card</span>
+            </button>
+            <button class="doc-type-btn" onclick="selectDoc('passport', this)">
+              <div class="doc-icon">📘</div>
+              <span>Passport</span>
+            </button>
+            <button class="doc-type-btn" onclick="selectDoc('drivers_license', this)">
+              <div class="doc-icon">🚗</div>
+              <span>Driver's License</span>
+            </button>
+            <button class="doc-type-btn" onclick="selectDoc('residence_permit', this)">
+              <div class="doc-icon">🏠</div>
+              <span>Residence Permit</span>
+            </button>
+          </div>
+
+          <div class="section-title" style="margin-bottom:16px;">Upload Document</div>
+          <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()"
+            ondragover="event.preventDefault(); this.classList.add('dragover')"
+            ondragleave="this.classList.remove('dragover')"
+            ondrop="handleDrop(event)">
+            <div class="upload-icon">📤</div>
+            <h3>Click to upload or drag & drop</h3>
+            <p>JPG, PNG or PDF • Max 5MB • Front of document</p>
+            <button class="btn-gold" style="pointer-events:none;">Choose File</button>
+          </div>
+
+          <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" style="display:none" onchange="handleFile(this.files[0])"/>
+
+          <div id="previewSection" style="display:none;">
+            <img id="previewImg" class="preview-img" alt="Document preview"/>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+              <span id="fileName" style="color:var(--gray); font-size:13px;"></span>
+              <button class="btn-sm btn-block" onclick="clearFile()">✕ Remove</button>
+            </div>
+          </div>
+
+          <div id="uploadError" style="display:none; background:rgba(229,62,62,0.1); padding:12px 16px; border-radius:8px; color:#FC8181; font-size:13px; margin-bottom:16px; border-left:3px solid var(--danger);"></div>
+
+          <button class="btn-gold" style="width:100%; padding:14px; font-size:16px; margin-top:8px;" id="submitBtn" onclick="submitKYC()" disabled>
+            Submit for Verification →
+          </button>
+
+          <div style="margin-top:20px; background:rgba(255,255,255,0.03); border-radius:12px; padding:16px 20px;">
+            <p style="font-size:13px; color:var(--gray); margin:0; line-height:1.7;">
+              🔒 <strong style="color:var(--white);">Your document is safe.</strong> We use bank-grade encryption and your ID is only used for verification purposes. We do not share your data with third parties.
+            </p>
+          </div>
+        </div>
+
+        <!-- SUBMITTED STATE -->
+        <div id="submittedSection" style="display:none; text-align:center; padding:40px 20px;">
+          <div style="font-size:64px; margin-bottom:20px;">📋</div>
+          <h2 style="margin-bottom:12px;">Document Under Review</h2>
+          <p style="color:var(--gray); max-width:400px; margin:0 auto 24px;">Your document has been submitted and is being reviewed by our team. We will notify you via email within 24 hours.</p>
+          <a href="dashboard.html" class="btn-outline">Back to Dashboard</a>
+        </div>
+
+        <!-- APPROVED STATE -->
+        <div id="approvedSection" style="display:none; text-align:center; padding:40px 20px;">
+          <div style="font-size:64px; margin-bottom:20px;">✅</div>
+          <h2 style="margin-bottom:12px; color:#48BB78;">Fully Verified!</h2>
+          <p style="color:var(--gray); max-width:400px; margin:0 auto 24px;">Your identity has been verified. You now have full access to all NexaBank features including money transfers and mobile money.</p>
+          <a href="dashboard.html" class="btn-gold">Go to Dashboard →</a>
+        </div>
+
+        <!-- REJECTED STATE -->
+        <div id="rejectedSection" style="display:none; text-align:center; padding:20px 0;">
+          <div style="font-size:64px; margin-bottom:20px; text-align:center;">❌</div>
+          <h2 style="margin-bottom:8px; text-align:center;">Verification Rejected</h2>
+          <div id="rejectionReason" style="background:rgba(229,62,62,0.08); border:1px solid rgba(229,62,62,0.2); border-radius:12px; padding:16px 20px; margin:16px 0 24px; font-size:14px; color:#FC8181;"></div>
+          <p style="color:var(--gray); margin-bottom:24px;">Please resubmit with a clearer, valid document.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="../js/dashboard.js"></script>
+  <script>
+    let selectedDocType = 'national_id';
+    let selectedFile = null;
+
+    window.addEventListener('load', () => {
+      setTimeout(() => document.getElementById('loader').classList.add('hidden'), 400);
+      const user = JSON.parse(localStorage.getItem('nexabank_session') || 'null');
+      if (!user) { window.location.href = 'login.html'; return; }
+      const initials = (user.name||'JD').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+      document.getElementById('userAvatar').textContent = initials;
+      updateBalanceDisplay(user.balance || 0);
+      checkKYCStatus(user.kyc_status, user.kyc_notes);
+    });
+
+    function checkKYCStatus(status, notes) {
+      const card = document.getElementById('kycStatusCard');
+      const icon = document.getElementById('kycStatusIcon');
+      const title = document.getElementById('kycStatusTitle');
+      const desc = document.getElementById('kycStatusDesc');
+
+      document.getElementById('uploadSection').style.display = 'none';
+      document.getElementById('submittedSection').style.display = 'none';
+      document.getElementById('approvedSection').style.display = 'none';
+      document.getElementById('rejectedSection').style.display = 'none';
+
+      if (status === 'approved') {
+        card.className = 'kyc-status-card approved';
+        icon.textContent = '✅'; title.textContent = 'Fully Verified';
+        desc.textContent = 'Your identity is verified. All features are unlocked.';
+        document.getElementById('approvedSection').style.display = 'block';
+        document.getElementById('step2').className = 'step done';
+        document.getElementById('step3').className = 'step done';
+        document.getElementById('step4').className = 'step done';
+      } else if (status === 'submitted') {
+        card.className = 'kyc-status-card submitted';
+        icon.textContent = '🔍'; title.textContent = 'Under Review';
+        desc.textContent = 'Your document is being reviewed. We\'ll notify you within 24 hours.';
+        document.getElementById('submittedSection').style.display = 'block';
+        document.getElementById('step2').className = 'step done';
+        document.getElementById('step3').className = 'step active';
+      } else if (status === 'rejected') {
+        card.className = 'kyc-status-card rejected';
+        icon.textContent = '❌'; title.textContent = 'Verification Rejected';
+        desc.textContent = 'Please resubmit your document.';
+        document.getElementById('rejectedSection').style.display = 'block';
+        document.getElementById('uploadSection').style.display = 'block';
+        if (notes) document.getElementById('rejectionReason').textContent = '📋 Reason: ' + notes;
+      } else {
+        document.getElementById('uploadSection').style.display = 'block';
+      }
+    }
+
+    function selectDoc(type, btn) {
+      selectedDocType = type;
+      document.querySelectorAll('.doc-type-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      document.getElementById('uploadZone').classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file) handleFile(file);
+    }
+
+    function handleFile(file) {
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        showError('File too large. Max 5MB.'); return;
+      }
+      selectedFile = file;
+      document.getElementById('fileName').textContent = file.name + ' (' + (file.size/1024).toFixed(0) + ' KB)';
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = e => {
+          document.getElementById('previewImg').src = e.target.result;
+          document.getElementById('previewSection').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        document.getElementById('previewImg').src = '';
+        document.getElementById('previewSection').style.display = 'block';
+      }
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('uploadError').style.display = 'none';
+    }
+
+    function clearFile() {
+      selectedFile = null;
+      document.getElementById('fileInput').value = '';
+      document.getElementById('previewSection').style.display = 'none';
+      document.getElementById('submitBtn').disabled = true;
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('uploadError');
+      el.textContent = '⚠️ ' + msg;
+      el.style.display = 'block';
+    }
+
+    async function submitKYC() {
+      if (!selectedFile) return;
+      const btn = document.getElementById('submitBtn');
+      btn.textContent = 'Uploading...';
+      btn.disabled = true;
+
+      // Simulate upload for localStorage version
+      setTimeout(() => {
+        const session = JSON.parse(localStorage.getItem('nexabank_session') || '{}');
+        session.kyc_status = 'submitted';
+        localStorage.setItem('nexabank_session', JSON.stringify(session));
+        checkKYCStatus('submitted');
+        showToast('✅ Document submitted! We\'ll review it within 24 hours.');
+      }, 1500);
+    }
+
+    function logout() { localStorage.removeItem('nexabank_session'); window.location.href = 'login.html'; }
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+  </script>
+</body>
+</html>

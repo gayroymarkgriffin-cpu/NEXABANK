@@ -6,19 +6,49 @@
   <title>Dashboard — NexaBank</title>
   <link rel="stylesheet" href="../css/style.css"/>
   <link rel="stylesheet" href="../css/dashboard.css"/>
+  <style>
+    .kyc-banner {
+      background: linear-gradient(135deg, rgba(214,158,46,0.12), rgba(212,175,55,0.06));
+      border: 1px solid rgba(214,158,46,0.3);
+      border-radius: 14px;
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .kyc-banner-left { display:flex; align-items:center; gap:14px; }
+    .kyc-banner h4 { font-size:15px; font-weight:700; margin-bottom:3px; color:#ECC94B; }
+    .kyc-banner p { font-size:13px; color:var(--gray); margin:0; }
+    .notif-dropdown {
+      position:absolute; top:52px; right:0; width:320px;
+      background:var(--navy-light); border:1px solid rgba(255,255,255,0.08);
+      border-radius:14px; box-shadow:0 8px 32px rgba(0,0,0,0.4);
+      z-index:300; display:none; overflow:hidden;
+    }
+    .notif-dropdown.open { display:block; }
+    .notif-header { padding:16px 20px; border-bottom:1px solid rgba(255,255,255,0.06); font-size:15px; font-weight:700; display:flex; justify-content:space-between; align-items:center; }
+    .notif-header button { font-size:12px; color:var(--gold); background:none; border:none; cursor:pointer; }
+    .notif-item { padding:14px 20px; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .notif-item.unread { border-left:3px solid var(--gold); }
+    .notif-title { font-size:13px; font-weight:600; margin-bottom:3px; }
+    .notif-msg { font-size:12px; color:var(--gray); }
+    .notif-empty { padding:32px; text-align:center; color:var(--gray); font-size:14px; }
+  </style>
 </head>
 <body>
   <div class="loading-overlay" id="loader"><div class="loader"></div></div>
-
   <div class="app-layout">
-    <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-logo">⬡ NexaBank</div>
       <nav class="sidebar-nav">
         <a href="dashboard.html" class="nav-item active"><span>🏠</span> Dashboard</a>
         <a href="transactions.html" class="nav-item"><span>📋</span> Transactions</a>
+        <a href="mobilemoney.html" class="nav-item"><span>📱</span> Mobile Money</a>
+        <a href="kyc.html" class="nav-item"><span>🪪</span> KYC Verify</a>
         <a href="#" class="nav-item" onclick="openModal('sendModal')"><span>📤</span> Send Money</a>
-        <a href="#" class="nav-item" onclick="openModal('receiveModal')"><span>📥</span> Receive</a>
         <a href="profile.html" class="nav-item"><span>👤</span> Profile</a>
         <a href="#" class="nav-item" onclick="logout()"><span>🚪</span> Logout</a>
       </nav>
@@ -28,9 +58,7 @@
       </div>
     </aside>
 
-    <!-- MAIN -->
     <main class="main-content">
-      <!-- TOP BAR -->
       <div class="topbar">
         <div class="topbar-left">
           <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
@@ -40,12 +68,30 @@
           </div>
         </div>
         <div class="topbar-right">
-          <div class="notif-btn">🔔<span class="notif-dot"></span></div>
+          <div style="position:relative;">
+            <div class="notif-btn" id="notifBtn" onclick="toggleNotif()">🔔<span class="notif-dot" id="notifDot" style="display:none;"></span></div>
+            <div class="notif-dropdown" id="notifDropdown">
+              <div class="notif-header">Notifications <button onclick="markAllRead()">Mark all read</button></div>
+              <div id="notifList"><div class="notif-empty">No notifications yet</div></div>
+            </div>
+          </div>
           <div class="user-avatar" id="userAvatar">JD</div>
         </div>
       </div>
 
-      <!-- BALANCE CARDS -->
+      <!-- KYC BANNER -->
+      <div class="kyc-banner" id="kycBanner" style="display:none;">
+        <div class="kyc-banner-left">
+          <div style="font-size:28px;">🪪</div>
+          <div>
+            <h4>Complete Your KYC Verification</h4>
+            <p>Upload your ID to unlock money transfers and mobile money features.</p>
+          </div>
+        </div>
+        <a href="kyc.html" class="btn-gold" style="padding:10px 20px; font-size:13px; white-space:nowrap;">Verify Now →</a>
+      </div>
+
+      <!-- CARDS -->
       <div class="cards-row">
         <div class="balance-card main-balance">
           <div class="card-label">Total Balance</div>
@@ -58,21 +104,21 @@
         </div>
         <div class="balance-card">
           <div class="card-label">Income This Month</div>
-          <div class="card-amount income">$4,250.00</div>
-          <div class="card-change positive">↑ +12% vs last month</div>
+          <div class="card-amount income" id="monthIncome">$0.00</div>
+          <div class="card-change positive">Credit transactions</div>
           <div class="card-icon">📈</div>
         </div>
         <div class="balance-card">
           <div class="card-label">Expenses This Month</div>
-          <div class="card-amount expense">$1,840.00</div>
-          <div class="card-change negative">↑ +5% vs last month</div>
+          <div class="card-amount expense" id="monthExpense">$0.00</div>
+          <div class="card-change negative">Debit transactions</div>
           <div class="card-icon">📉</div>
         </div>
         <div class="balance-card">
-          <div class="card-label">Savings Goal</div>
-          <div class="card-amount">$10,000</div>
-          <div class="progress-bar"><div class="progress-fill" style="width:62%"></div></div>
-          <small style="color:var(--gray); font-size:12px;">62% achieved</small>
+          <div class="card-label">KYC Status</div>
+          <div class="card-amount" id="kycStatusVal" style="font-size:20px;">⏳ Pending</div>
+          <div class="progress-bar"><div class="progress-fill" id="kycProgress" style="width:25%"></div></div>
+          <small style="color:var(--gray); font-size:12px;" id="kycStatusSub">Upload your ID to continue</small>
         </div>
       </div>
 
@@ -81,10 +127,10 @@
       <div class="quick-actions">
         <button class="quick-btn" onclick="openModal('sendModal')"><span>📤</span>Send</button>
         <button class="quick-btn" onclick="openModal('receiveModal')"><span>📥</span>Receive</button>
+        <button class="quick-btn" onclick="window.location.href='mobilemoney.html'"><span>📱</span>Mobile Money</button>
+        <button class="quick-btn" onclick="window.location.href='kyc.html'"><span>🪪</span>KYC</button>
         <button class="quick-btn" onclick="window.location.href='transactions.html'"><span>📋</span>History</button>
-        <button class="quick-btn"><span>💳</span>Cards</button>
-        <button class="quick-btn"><span>📱</span>Top Up</button>
-        <button class="quick-btn"><span>🧾</span>Pay Bills</button>
+        <button class="quick-btn" onclick="window.location.href='profile.html'"><span>👤</span>Profile</button>
       </div>
 
       <!-- RECENT TRANSACTIONS -->
@@ -96,25 +142,13 @@
     </main>
   </div>
 
-  <!-- SEND MONEY MODAL -->
+  <!-- SEND MODAL -->
   <div class="modal-overlay" id="sendModal">
     <div class="modal">
-      <div class="modal-header">
-        <h3>Send Money</h3>
-        <button class="modal-close" onclick="closeModal('sendModal')">✕</button>
-      </div>
-      <div class="form-group">
-        <label>Recipient Email or Account</label>
-        <input type="text" id="sendTo" placeholder="email@example.com"/>
-      </div>
-      <div class="form-group">
-        <label>Amount ($)</label>
-        <input type="number" id="sendAmount" placeholder="0.00" min="1"/>
-      </div>
-      <div class="form-group">
-        <label>Note (optional)</label>
-        <input type="text" id="sendNote" placeholder="e.g. Rent payment"/>
-      </div>
+      <div class="modal-header"><h3>Send Money</h3><button class="modal-close" onclick="closeModal('sendModal')">✕</button></div>
+      <div class="form-group"><label>Recipient Email or Account</label><input type="text" id="sendTo" placeholder="email@example.com"/></div>
+      <div class="form-group"><label>Amount ($)</label><input type="number" id="sendAmount" placeholder="0.00" min="1"/></div>
+      <div class="form-group"><label>Note (optional)</label><input type="text" id="sendNote" placeholder="e.g. Rent payment"/></div>
       <div id="sendError" style="color:var(--danger); font-size:13px; margin-bottom:12px; display:none;"></div>
       <button class="btn-gold full-btn" onclick="sendMoney()">Send Money →</button>
     </div>
@@ -123,13 +157,10 @@
   <!-- RECEIVE MODAL -->
   <div class="modal-overlay" id="receiveModal">
     <div class="modal">
-      <div class="modal-header">
-        <h3>Receive Money</h3>
-        <button class="modal-close" onclick="closeModal('receiveModal')">✕</button>
-      </div>
-      <div style="text-align:center; padding: 20px 0;">
+      <div class="modal-header"><h3>Receive Money</h3><button class="modal-close" onclick="closeModal('receiveModal')">✕</button></div>
+      <div style="text-align:center; padding:20px 0;">
         <div class="qr-placeholder">📲<br/><small>QR Code</small></div>
-        <p style="color:var(--gray); margin: 16px 0 8px;">Your Account Number</p>
+        <p style="color:var(--gray); margin:16px 0 8px;">Your Account Number</p>
         <div class="account-number" id="accountNumber">NEXA-000000</div>
         <button class="btn-outline" style="margin-top:16px;" onclick="copyAccount()">📋 Copy Account Number</button>
       </div>
@@ -137,5 +168,96 @@
   </div>
 
   <script src="../js/dashboard.js"></script>
+  <script>
+    let notifications = [];
+
+    function loadNotifications() {
+      notifications = JSON.parse(localStorage.getItem('nexabank_notifications') || '[]');
+      const unread = notifications.filter(n => !n.read).length;
+      document.getElementById('notifDot').style.display = unread > 0 ? 'block' : 'none';
+      const list = document.getElementById('notifList');
+      if (!notifications.length) { list.innerHTML = '<div class="notif-empty">🔔 No notifications yet</div>'; return; }
+      list.innerHTML = notifications.slice(0,8).map(n => `
+        <div class="notif-item ${n.read?'':'unread'}">
+          <div class="notif-title">${n.title}</div>
+          <div class="notif-msg">${n.message}</div>
+        </div>`).join('');
+    }
+
+    function toggleNotif() { document.getElementById('notifDropdown').classList.toggle('open'); }
+
+    function markAllRead() {
+      notifications = notifications.map(n => ({...n, read:true}));
+      localStorage.setItem('nexabank_notifications', JSON.stringify(notifications));
+      loadNotifications();
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('notifBtn').contains(e.target) && !document.getElementById('notifDropdown').contains(e.target))
+        document.getElementById('notifDropdown').classList.remove('open');
+    });
+
+    function updateKYCCard(status) {
+      const val = document.getElementById('kycStatusVal');
+      const sub = document.getElementById('kycStatusSub');
+      const progress = document.getElementById('kycProgress');
+      const banner = document.getElementById('kycBanner');
+      if (status === 'approved') {
+        val.textContent = '✅ Verified'; val.style.color = '#48BB78';
+        sub.textContent = 'Full access unlocked'; progress.style.width = '100%';
+        banner.style.display = 'none';
+      } else if (status === 'submitted') {
+        val.textContent = '🔍 Under Review'; val.style.color = '#63B3ED';
+        sub.textContent = 'Review takes up to 24 hours'; progress.style.width = '66%';
+        banner.style.display = 'none';
+      } else if (status === 'rejected') {
+        val.textContent = '❌ Rejected'; val.style.color = '#FC8181';
+        sub.textContent = 'Please resubmit document'; progress.style.width = '25%';
+        banner.style.display = 'flex';
+      } else {
+        val.textContent = '⏳ Pending'; val.style.color = '#ECC94B';
+        sub.textContent = 'Upload your ID to continue'; progress.style.width = '25%';
+        banner.style.display = 'flex';
+      }
+    }
+
+    window.addEventListener('load', () => {
+      setTimeout(() => document.getElementById('loader').classList.add('hidden'), 500);
+      const user = getSession();
+      if (!user) return;
+
+      const h = new Date().getHours();
+      const greeting = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+      document.getElementById('welcomeMsg').textContent = greeting + ', ' + (user.name?.split(' ')[0]||'there') + ' 👋';
+      document.getElementById('welcomeDate').textContent = new Date().toLocaleDateString('en-US', {weekday:'long',month:'long',day:'numeric',year:'numeric'});
+
+      const initials = (user.name||'JD').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+      document.querySelectorAll('#userAvatar').forEach(el => el.textContent = initials);
+
+      updateBalanceDisplay(user.balance ?? 5000);
+      const accNumEl = document.getElementById('accountNumber');
+      if (accNumEl) accNumEl.textContent = 'NEXA-' + (user.id||'DEMO01').slice(-6).toUpperCase();
+
+      updateKYCCard(user.kyc_status || 'pending');
+
+      const txs = getTransactions();
+      const now = new Date();
+      const monthTxs = txs.filter(t => { const d = new Date(t.date); return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear(); });
+      const income = monthTxs.filter(t=>t.type==='credit').reduce((s,t)=>s+t.amount,0);
+      const expense = monthTxs.filter(t=>t.type==='debit').reduce((s,t)=>s+t.amount,0);
+      document.getElementById('monthIncome').textContent = '$' + income.toFixed(2);
+      document.getElementById('monthExpense').textContent = '$' + expense.toFixed(2);
+      renderTransactions(txs, 'transactionsList', 6);
+
+      const notifs = JSON.parse(localStorage.getItem('nexabank_notifications') || '[]');
+      if (!notifs.length) {
+        notifs.push({id:'n1', title:'🎉 Welcome to NexaBank!', message:'Complete your KYC to unlock all features.', read:false});
+        if ((user.kyc_status||'pending') === 'pending')
+          notifs.push({id:'n2', title:'🪪 KYC Required', message:'Upload your ID to send money and use mobile money.', read:false});
+        localStorage.setItem('nexabank_notifications', JSON.stringify(notifs));
+      }
+      loadNotifications();
+    });
+  </script>
 </body>
 </html>
