@@ -85,10 +85,15 @@
         </div>
       </div>
 
-      <div class="sandbox-notice">
-        🧪 <strong>Sandbox Mode:</strong> Transactions are simulated. Connect real MTN/Orange API keys in Render environment variables to go live.
-      </div>
+      <div class="sandbox-notice" id="sandboxNotice" style="display:none;">
+  🧪 <strong>Sandbox Mode:</strong> Transactions are simulated. Connect real MTN/Orange API keys in Render environment variables to go live.
+</div>
 
+<script>
+  // Only show sandbox notice to admin
+  const _s = JSON.parse(localStorage.getItem('nexabank_session') || '{}');
+  if (_s.is_admin) document.getElementById('sandboxNotice').style.display = 'block';
+</script>
       <!-- TABS -->
       <div class="mm-tabs">
         <button class="mm-tab active" onclick="switchTab('deposit', this)">📥 Deposit</button>
