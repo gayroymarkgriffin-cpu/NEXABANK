@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Loans — NexaBank</title>
+  <link rel="stylesheet" href="../css/style.css"/>
+  <link rel="stylesheet" href="../css/dashboard.css"/>
+  <style>
+    .loan-tabs { display:flex; gap:4px; background:rgba(255,255,255,0.03); border-radius:12px; padding:4px; width:fit-content; margin-bottom:28px; }
+    .loan-tab { padding:10px 24px; border-radius:8px; border:none; font-size:14px; font-weight:600; cursor:pointer; background:transparent; color:var(--gray); transition:all 0.2s; }
+    .loan-tab.active { background:var(--navy-light); color:var(--white); }
+    .loan-panel { display:none; }
+    .loan-panel.active { display:block; }
+
+    /* APPLY FORM */
+    .loan-form-wrap { display:grid; grid-template-columns:1fr 1fr; gap:24px; max-width:900px; }
+    .loan-form { background:var(--navy-light); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:28px; }
+    .loan-form h3 { font-size:17px; font-weight:700; margin-bottom:20px; }
+
+    .loan-summary { background:var(--navy-light); border:1px solid rgba(212,175,55,0.2); border-radius:16px; padding:28px; }
+    .loan-summary h3 { font-size:17px; font-weight:700; margin-bottom:20px; color:var(--gold); }
+    .summary-row { display:flex; justify-content:space-between; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.05); }
+    .summary-row:last-child { border:none; }
+    .summary-row span { color:var(--gray); font-size:14px; }
+    .summary-row strong { font-size:14px; }
+    .summary-total { background:rgba(212,175,55,0.08); border-radius:10px; padding:16px; margin-top:16px; text-align:center; }
+    .summary-total small { color:var(--gray); font-size:12px; display:block; margin-bottom:4px; }
+    .summary-total strong { font-size:24px; font-weight:800; color:var(--gold); }
+
+    .purpose-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:4px; }
+    .purpose-btn { padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); cursor:pointer; text-align:center; font-size:13px; font-weight:500; color:var(--gray); transition:all 0.2s; }
+    .purpose-btn:hover { border-color:rgba(212,175,55,0.3); color:var(--white); }
+    .purpose-btn.selected { border-color:var(--gold); background:rgba(212,175,55,0.08); color:var(--gold); }
+    .purpose-btn .p-icon { font-size:22px; display:block; margin-bottom:6px; }
+
+    /* LOAN CARDS */
+    .loan-card { background:var(--navy-light); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:24px; margin-bottom:16px; }
+    .loan-card-header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:20px; flex-wrap:wrap; gap:12px; }
+    .loan-card-title { font-size:16px; font-weight:700; margin-bottom:4px; }
+    .loan-card-sub { font-size:13px; color:var(--gray); }
+    .loan-status { padding:5px 14px; border-radius:20px; font-size:12px; font-weight:700; }
+    .loan-status.pending { background:rgba(214,158,46,0.15); color:#ECC94B; }
+    .loan-status.approved { background:rgba(56,161,105,0.15); color:#48BB78; }
+    .loan-status.rejected { background:rgba(229,62,62,0.12); color:#FC8181; }
+    .loan-status.active { background:rgba(49,130,206,0.15); color:#63B3ED; }
+    .loan-status.completed { background:rgba(255,255,255,0.08); color:var(--gray); }
+    .loan-status.overdue { background:rgba(229,62,62,0.2); color:#FC8181; }
+
+    .loan-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+    .loan-stat { background:rgba(255,255,255,0.03); border-radius:10px; padding:12px; text-align:center; }
+    .loan-stat small { color:var(--gray); font-size:11px; display:block; margin-bottom:4px; text-transform:uppercase; }
+    .loan-stat strong { font-size:16px; font-weight:700; }
+
+    .repayment-bar { margin-bottom:16px; }
+    .repayment-label { display:flex; justify-content:space-between; font-size:13px; margin-bottom:8px; }
+    .repayment-label span { color:var(--gray); }
+
+    .schedule-item { display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid rgba(255,255,255,0.04); }
+    .schedule-item:last-child { border:none; }
+    .schedule-num { width:28px; height:28px; border-radius:50%; background:rgba(255,255,255,0.06); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; flex-shrink:0; }
+    .schedule-num.paid { background:rgba(56,161,105,0.2); color:#48BB78; }
+    .schedule-num.due { background:rgba(212,175,55,0.15); color:var(--gold); }
+    .schedule-num.overdue { background:rgba(229,62,62,0.15); color:#FC8181; }
+    .schedule-info { flex:1; }
+    .schedule-date { font-size:13px; font-weight:600; }
+    .schedule-sub { font-size:11px; color:var(--gray); margin-top:2px; }
+    .schedule-amount { font-size:14px; font-weight:700; }
+
+    .pay-btn { padding:8px 18px; background:rgba(212,175,55,0.1); border:1px solid rgba(212,175,55,0.3); border-radius:8px; color:var(--gold); font-size:12px; font-weight:600; cursor:pointer; transition:all 0.2s; }
+    .pay-btn:hover { background:rgba(212,175,55,0.2); }
+
+    .empty-loans { text-align:center; padding:60px 20px; color:var(--gray); }
+    .empty-loans .empty-icon { font-size:56px; margin-bottom:16px; }
+
+    @media (max-width:768px) {
+      .loan-form-wrap { grid-template-columns:1fr; }
+      .loan-stats { grid-template-columns:1fr 1fr; }
+      .purpose-grid { grid-template-columns:1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="loading-overlay" id="loader"><div class="loader"></div></div>
+
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo">⬡ NexaBank</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="nav-item"><span>🏠</span> Dashboard</a>
+        <a href="transactions.html" class="nav-item"><span>📋</span> Transactions</a>
+        <a href="mobilemoney.html" class="nav-item"><span>📱</span> Mobile Money</a>
+        <a href="loans.html" class="nav-item active"><span>💰</span> Loans</a>
+        <a href="kyc.html" class="nav-item"><span>🪪</span> KYC Verify</a>
+        <a href="profile.html" class="nav-item"><span>👤</span> Profile</a>
+        <a href="#" class="nav-item" onclick="logout()"><span>🚪</span> Logout</a>
+      </nav>
+      <div class="sidebar-card">
+        <small>Total Balance</small>
+        <strong id="sidebarBalance">$0.00</strong>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+          <div>
+            <h1>Loans</h1>
+            <p style="color:var(--gray); font-size:13px;">Apply for a loan or manage your repayments</p>
+          </div>
+        </div>
+        <div class="topbar-right">
+          <div class="user-avatar" id="userAvatar">JD</div>
+        </div>
+      </div>
+
+      <!-- TABS -->
+      <div class="loan-tabs">
+        <button class="loan-tab active" id="tab-apply" onclick="switchTab('apply', this)">💳 Apply</button>
+        <button class="loan-tab" id="tab-myloans" onclick="switchTab('myloans', this)">📋 My Loans</button>
+        <button class="loan-tab" id="tab-schedule" onclick="switchTab('schedule', this)">📅 Repayment</button>
+      </div>
+
+      <!-- ===== APPLY ===== -->
+      <div class="loan-panel active" id="panel-apply">
+        <div id="applyError" style="display:none; background:rgba(229,62,62,0.1); padding:14px 18px; border-radius:10px; color:#FC8181; font-size:13px; margin-bottom:20px; border-left:3px solid var(--danger);"></div>
+        <div id="applySuccess" style="display:none; background:rgba(56,161,105,0.1); padding:14px 18px; border-radius:10px; color:#48BB78; font-size:13px; margin-bottom:20px; border-left:3px solid var(--success);"></div>
+
+        <div class="loan-form-wrap">
+          <!-- FORM -->
+          <div class="loan-form">
+            <h3>Loan Application</h3>
+
+            <div class="form-group">
+              <label>Loan Amount ($)</label>
+              <input type="number" id="loanAmount" placeholder="e.g. 500" min="50" max="50000" oninput="updateSummary()"/>
+            </div>
+
+            <div class="form-group">
+              <label>Repayment Period</label>
+              <select id="loanTenure" onchange="updateSummary()">
+                <option value="1">1 Month</option>
+                <option value="3" selected>3 Months</option>
+                <option value="6">6 Months</option>
+                <option value="12">12 Months</option>
+                <option value="24">24 Months</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label>Loan Purpose</label>
+              <div class="purpose-grid">
+                <button class="purpose-btn selected" onclick="selectPurpose('Business', this)"><span class="p-icon">🏢</span>Business</button>
+                <button class="purpose-btn" onclick="selectPurpose('Education', this)"><span class="p-icon">🎓</span>Education</button>
+                <button class="purpose-btn" onclick="selectPurpose('Medical', this)"><span class="p-icon">🏥</span>Medical</button>
+                <button class="purpose-btn" onclick="selectPurpose('Housing', this)"><span class="p-icon">🏠</span>Housing</button>
+                <button class="purpose-btn" onclick="selectPurpose('Agriculture', this)"><span class="p-icon">🌾</span>Agriculture</button>
+                <button class="purpose-btn" onclick="selectPurpose('Personal', this)"><span class="p-icon">👤</span>Personal</button>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Additional Details (optional)</label>
+              <input type="text" id="loanDetails" placeholder="Briefly describe how you'll use the loan"/>
+            </div>
+
+            <div class="form-group">
+              <label>Monthly Income ($)</label>
+              <input type="number" id="loanIncome" placeholder="Your monthly income" oninput="updateSummary()"/>
+            </div>
+
+            <button class="btn-gold" style="width:100%; padding:14px; font-size:15px;" onclick="submitLoan()">
+              Submit Application →
+            </button>
+
+            <p style="text-align:center; font-size:12px; color:var(--gray); margin-top:16px;">
+              ⏱️ Applications reviewed within 24–48 hours. KYC verification required.
+            </p>
+          </div>
+
+          <!-- SUMMARY -->
+          <div class="loan-summary">
+            <h3>📊 Loan Summary</h3>
+            <div class="summary-row"><span>Loan Amount</span><strong id="sumAmount">$0.00</strong></div>
+            <div class="summary-row"><span>Interest Rate</span><strong id="sumRate">5% / month</strong></div>
+            <div class="summary-row"><span>Tenure</span><strong id="sumTenure">3 months</strong></div>
+            <div class="summary-row"><span>Total Interest</span><strong id="sumInterest" style="color:#FC8181;">$0.00</strong></div>
+            <div class="summary-row"><span>Total Repayment</span><strong id="sumTotal">$0.00</strong></div>
+            <div class="summary-row"><span>Monthly Payment</span><strong id="sumMonthly" style="color:var(--gold);">$0.00</strong></div>
+            <div class="summary-total">
+              <small>Monthly Instalment</small>
+              <strong id="sumMonthlyBig">$0.00</strong>
+            </div>
+
+            <div style="margin-top:20px; padding:16px; background:rgba(255,255,255,0.02); border-radius:10px;">
+              <p style="font-size:12px; color:var(--gray); margin:0; line-height:1.7;">
+                📋 <strong style="color:var(--white);">Requirements:</strong><br/>
+                ✅ Verified KYC account<br/>
+                ✅ Active account for 30+ days<br/>
+                ✅ No existing overdue loans<br/>
+                ✅ Stable income source
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== MY LOANS ===== -->
+      <div class="loan-panel" id="panel-myloans">
+        <div id="myLoansList"></div>
+      </div>
+
+      <!-- ===== REPAYMENT SCHEDULE ===== -->
+      <div class="loan-panel" id="panel-schedule">
+        <div id="scheduleContent"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- PAY INSTALMENT MODAL -->
+  <div class="modal-overlay" id="payModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Make Payment</h3>
+        <button class="modal-close" onclick="closeModal('payModal')">✕</button>
+      </div>
+      <div style="text-align:center; padding:10px 0 20px;">
+        <div style="font-size:40px; margin-bottom:12px;">💳</div>
+        <p style="color:var(--gray); font-size:14px; margin-bottom:8px;">Payment Amount</p>
+        <div style="font-size:28px; font-weight:800; color:var(--gold);" id="payAmount">$0.00</div>
+        <p style="color:var(--gray); font-size:13px; margin-top:8px;" id="payDesc">Monthly instalment</p>
+      </div>
+      <div id="payError" style="display:none; color:#FC8181; font-size:13px; margin-bottom:12px;"></div>
+      <button class="btn-gold full-btn" onclick="confirmPayment()">Confirm Payment →</button>
+      <button class="btn-outline full-btn" style="margin-top:10px;" onclick="closeModal('payModal')">Cancel</button>
+    </div>
+  </div>
+
+  <script src="../js/dashboard.js"></script>
+  <script>
+    const INTEREST_RATE = 0.05; // 5% per month — change this in admin
+    let selectedPurpose = 'Business';
+    let currentPayment = null;
+
+    // ---- INIT ----
+    window.addEventListener('load', () => {
+      setTimeout(() => document.getElementById('loader').classList.add('hidden'), 400);
+      const user = JSON.parse(localStorage.getItem('nexabank_session') || 'null');
+      if (!user) { window.location.href = 'login.html'; return; }
+      const initials = (user.name||'JD').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2);
+      document.getElementById('userAvatar').textContent = initials;
+      updateBalanceDisplay(user.balance || 0);
+      updateSummary();
+      loadMyLoans();
+      loadSchedule();
+    });
+
+    // ---- TABS ----
+    function switchTab(name, btn) {
+      document.querySelectorAll('.loan-panel').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.loan-tab').forEach(b => b.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    // ---- PURPOSE ----
+    function selectPurpose(p, btn) {
+      selectedPurpose = p;
+      document.querySelectorAll('.purpose-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+    }
+
+    // ---- LOAN SUMMARY CALCULATOR ----
+    function updateSummary() {
+      const amount = parseFloat(document.getElementById('loanAmount').value) || 0;
+      const tenure = parseInt(document.getElementById('loanTenure').value) || 3;
+      const interest = amount * INTEREST_RATE * tenure;
+      const total = amount + interest;
+      const monthly = total / tenure;
+
+      document.getElementById('sumAmount').textContent = '$' + amount.toFixed(2);
+      document.getElementById('sumRate').textContent = (INTEREST_RATE * 100) + '% / month';
+      document.getElementById('sumTenure').textContent = tenure + ' month' + (tenure > 1 ? 's' : '');
+      document.getElementById('sumInterest').textContent = '$' + interest.toFixed(2);
+      document.getElementById('sumTotal').textContent = '$' + total.toFixed(2);
+      document.getElementById('sumMonthly').textContent = '$' + monthly.toFixed(2);
+      document.getElementById('sumMonthlyBig').textContent = '$' + monthly.toFixed(2);
+    }
+
+    // ---- SUBMIT LOAN ----
+    function submitLoan() {
+      const user = JSON.parse(localStorage.getItem('nexabank_session') || '{}');
+      const amount = parseFloat(document.getElementById('loanAmount').value);
+      const tenure = parseInt(document.getElementById('loanTenure').value);
+      const details = document.getElementById('loanDetails').value.trim();
+      const income = parseFloat(document.getElementById('loanIncome').value);
+
+      const errEl = document.getElementById('applyError');
+      const sucEl = document.getElementById('applySuccess');
+      errEl.style.display = 'none';
+      sucEl.style.display = 'none';
+
+      if (!amount || amount < 50) { errEl.textContent = '⚠️ Minimum loan amount is $50'; errEl.style.display = 'block'; return; }
+      if (amount > 50000) { errEl.textContent = '⚠️ Maximum loan amount is $50,000'; errEl.style.display = 'block'; return; }
+      if (!income || income <= 0) { errEl.textContent = '⚠️ Please enter your monthly income'; errEl.style.display = 'block'; return; }
+      if ((user.kyc_status || 'pending') !== 'approved') {
+        errEl.textContent = '⚠️ KYC verification required before applying for a loan.';
+        errEl.style.display = 'block'; return;
+      }
+
+      // Check existing active/pending loans
+      const loans = JSON.parse(localStorage.getItem('nexabank_loans') || '[]');
+      const userLoans = loans.filter(l => l.user_id === user.id);
+      const hasActiveLoan = userLoans.find(l => ['active','pending','approved'].includes(l.status));
+      if (hasActiveLoan) {
+        errEl.textContent = '⚠️ You already have an active or pending loan. Please complete it before applying again.';
+        errEl.style.display = 'block'; return;
+      }
+
+      const btn = document.querySelector('#panel-apply .btn-gold');
+      btn.textContent = 'Submitting...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        const interest = amount * INTEREST_RATE * tenure;
+        const total = amount + interest;
+        const monthly = total / tenure;
+
+        const loan = {
+          id: 'loan_' + Date.now(),
+          user_id: user.id,
+          user_name: user.name,
+          amount,
+          tenure,
+          purpose: selectedPurpose,
+          details,
+          income,
+          interest_rate: INTEREST_RATE,
+          interest,
+          total_repayment: total,
+          monthly_payment: monthly,
+          amount_paid: 0,
+          status: 'pending',
+          applied_at: new Date().toISOString(),
+          approved_at: null,
+          rejection_reason: null,
+          schedule: generateSchedule(monthly, tenure)
+        };
+
+        loans.push(loan);
+        localStorage.setItem('nexabank_loans', JSON.stringify(loans));
+
+        sucEl.textContent = '✅ Loan application submitted! We will review it within 24–48 hours and notify you by email.';
+        sucEl.style.display = 'block';
+        btn.textContent = 'Submit Application →';
+        btn.disabled = false;
+
+        document.getElementById('loanAmount').value = '';
+        document.getElementById('loanIncome').value = '';
+        document.getElementById('loanDetails').value = '';
+        updateSummary();
+
+        showToast('✅ Loan application submitted successfully!');
+      }, 1200);
+    }
+
+    // ---- GENERATE SCHEDULE ----
+    function generateSchedule(monthly, tenure) {
+      const schedule = [];
+      const now = new Date();
+      for (let i = 1; i <= tenure; i++) {
+        const dueDate = new Date(now);
+        dueDate.setMonth(dueDate.getMonth() + i);
+        schedule.push({
+          instalment: i,
+          amount: monthly,
+          due_date: dueDate.toISOString(),
+          paid: false,
+          paid_at: null
+        });
+      }
+      return schedule;
+    }
+
+    // ---- LOAD MY LOANS ----
+    function loadMyLoans() {
+      const user = JSON.parse(localStorage.getItem('nexabank_session') || '{}');
+      const loans = JSON.parse(localStorage.getItem('nexabank_loans') || '[]');
+      const myLoans = loans.filter(l => l.user_id === user.id);
+      const container = document.getElementById('myLoansList');
+
+      if (!myLoans.length) {
+        container.innerHTML = `
+          <div class="empty-loans">
+            <div class="empty-icon">💰</div>
+            <h3 style="margin-bottom:8px;">No Loans Yet</h3>
+            <p style="margin-bottom:24px;">Apply for your first loan to get started.</p>
+            <button class="btn-gold" onclick="switchTab('apply', document.getElementById('tab-apply'))">Apply Now →</button>
+          </div>`;
+        return;
+      }
+
+      container.innerHTML = myLoans.reverse().map(loan => {
+        const paidCount = loan.schedule?.filter(s => s.paid).length || 0;
+        const totalCount = loan.schedule?.length || loan.tenure;
+        const progress = totalCount > 0 ? (paidCount / totalCount) * 100 : 0;
+        const nextDue = loan.schedule?.find(s => !s.paid);
+
+        return `
+        <div class="loan-card">
+          <div class="loan-card-header">
+            <div>
+              <div class="loan-card-title">${loan.purpose} Loan — $${loan.amount.toFixed(2)}</div>
+              <div class="loan-card-sub">Applied ${new Date(loan.applied_at).toLocaleDateString()} • ${loan.tenure} months</div>
+            </div>
+            <span class="loan-status ${loan.status}">${statusLabel(loan.status)}</span>
+          </div>
+
+          <div class="loan-stats">
+            <div class="loan-stat"><small>Loan Amount</small><strong>$${loan.amount.toFixed(2)}</strong></div>
+            <div class="loan-stat"><small>Total Repay</small><strong>$${loan.total_repayment.toFixed(2)}</strong></div>
+            <div class="loan-stat"><small>Monthly</small><strong style="color:var(--gold);">$${loan.monthly_payment.toFixed(2)}</strong></div>
+            <div class="loan-stat"><small>Remaining</small><strong style="color:#FC8181;">$${(loan.total_repayment - loan.amount_paid).toFixed(2)}</strong></div>
+          </div>
+
+          ${loan.status === 'active' ? `
+            <div class="repayment-bar">
+              <div class="repayment-label"><span>Repayment Progress</span><span>${paidCount}/${totalCount} instalments paid</span></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:${progress}%; background:${progress===100?'#48BB78':'var(--gold)'}"></div></div>
+            </div>
+            ${nextDue ? `
+              <div style="display:flex; align-items:center; justify-content:space-between; background:rgba(212,175,55,0.06); border:1px solid rgba(212,175,55,0.2); border-radius:10px; padding:14px 18px;">
+                <div>
+                  <div style="font-size:13px; font-weight:600; color:var(--gold);">Next Payment Due</div>
+                  <div style="font-size:12px; color:var(--gray);">${new Date(nextDue.due_date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:16px; font-weight:800;">$${nextDue.amount.toFixed(2)}</div>
+                  <button class="pay-btn" onclick="openPayment('${loan.id}', ${nextDue.instalment}, ${nextDue.amount})">Pay Now</button>
+                </div>
+              </div>` : '<div style="text-align:center; color:#48BB78; font-weight:700; padding:12px;">🎉 All instalments paid!</div>'}
+          ` : ''}
+
+          ${loan.status === 'rejected' && loan.rejection_reason ? `
+            <div style="background:rgba(229,62,62,0.08); border-radius:10px; padding:14px; font-size:13px; color:#FC8181;">
+              <strong>Rejection Reason:</strong> ${loan.rejection_reason}
+            </div>` : ''}
+
+          ${loan.status === 'pending' ? `
+            <div style="background:rgba(214,158,46,0.06); border-radius:10px; padding:14px; font-size:13px; color:#ECC94B;">
+              ⏳ Your application is under review. We'll notify you within 24–48 hours.
+            </div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    function statusLabel(s) {
+      return { pending:'⏳ Pending', approved:'✅ Approved', rejected:'❌ Rejected', active:'🔵 Active', completed:'✅ Completed', overdue:'🔴 Overdue' }[s] || s;
+    }
+
+    // ---- LOAD SCHEDULE ----
+    function loadSchedule() {
+      const user = JSON.parse(localStorage.getItem('nexabank_session') || '{}');
+      const loans = JSON.parse(localStorage.getItem('nexabank_loans') || '[]');
+      const activeLoan = loans.find(l => l.user_id === user.id && l.status === 'active');
+      const container = document.getElementById('scheduleContent');
+
+      if (!activeLoan) {
+        container.innerHTML = `
+          <div class="empty-loans">
+            <div class="empty-icon">📅</div>
+            <h3 style="margin-bottom:8px;">No Active Loan</h3>
+            <p>Your repayment schedule will appear here once your loan is approved.</p>
+          </div>`;
+        return;
+      }
+
+      const paidCount = activeLoan.schedule.filter(s => s.paid).length;
+      const progress = (paidCount / activeLoan.schedule.length) * 100;
+
+      container.innerHTML = `
+        <div class="loan-card" style="margin-bottom:24px;">
+          <div class="loan-card-header">
+            <div>
+              <div class="loan-card-title">${activeLoan.purpose} Loan — $${activeLoan.amount.toFixed(2)}</div>
+              <div class="loan-card-sub">${paidCount} of ${activeLoan.tenure} payments made</div>
+            </div>
+            <span class="loan-status active">🔵 Active</span>
+          </div>
+          <div class="repayment-bar">
+            <div class="repayment-label">
+              <span>Overall Progress</span>
+              <span style="color:var(--gold);">${progress.toFixed(0)}% complete</span>
+            </div>
+            <div class="progress-bar" style="height:10px;"><div class="progress-fill" style="width:${progress}%;"></div></div>
+          </div>
+        </div>
+
+        <div class="section-title" style="margin-bottom:16px;">Payment Schedule</div>
+        <div style="background:var(--navy-light); border:1px solid rgba(255,255,255,0.06); border-radius:16px; padding:24px;">
+          ${activeLoan.schedule.map(s => {
+            const isPaid = s.paid;
+            const isOverdue = !s.paid && new Date(s.due_date) < new Date();
+            const isDue = !s.paid && !isOverdue;
+            return `
+            <div class="schedule-item">
+              <div class="schedule-num ${isPaid?'paid':isOverdue?'overdue':'due'}">${isPaid?'✓':isOverdue?'!':s.instalment}</div>
+              <div class="schedule-info">
+                <div class="schedule-date">Instalment ${s.instalment} ${isOverdue?'<span style="color:#FC8181; font-size:11px;">OVERDUE</span>':''}</div>
+                <div class="schedule-sub">${new Date(s.due_date).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}${isPaid?' • Paid '+new Date(s.paid_at).toLocaleDateString():''}</div>
+              </div>
+              <div style="text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
+                <div class="schedule-amount" style="color:${isPaid?'#48BB78':isOverdue?'#FC8181':'var(--white)'};">$${s.amount.toFixed(2)}</div>
+                ${!isPaid ? `<button class="pay-btn" onclick="openPayment('${activeLoan.id}', ${s.instalment}, ${s.amount})">Pay</button>` : ''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
+    }
+
+    // ---- PAYMENT ----
+    function openPayment(loanId, instalment, amount) {
+      currentPayment = { loanId, instalment, amount };
+      document.getElementById('payAmount').textContent = '$' + amount.toFixed(2);
+      document.getElementById('payDesc').textContent = `Instalment #${instalment}`;
+      openModal('payModal');
+    }
+
+    function confirmPayment() {
+      if (!currentPayment) return;
+      const user = JSON.parse(localStorage.getItem('nexabank_session') || '{}');
+      if ((user.balance || 0) < currentPayment.amount) {
+        document.getElementById('payError').textContent = '⚠️ Insufficient balance';
+        document.getElementById('payError').style.display = 'block';
+        return;
+      }
+
+      const btn = document.querySelector('#payModal .btn-gold');
+      btn.textContent = 'Processing...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        const loans = JSON.parse(localStorage.getItem('nexabank_loans') || '[]');
+        const loanIdx = loans.findIndex(l => l.id === currentPayment.loanId);
+
+        if (loanIdx >= 0) {
+          const sIdx = loans[loanIdx].schedule.findIndex(s => s.instalment === currentPayment.instalment);
+          if (sIdx >= 0) {
+            loans[loanIdx].schedule[sIdx].paid = true;
+            loans[loanIdx].schedule[sIdx].paid_at = new Date().toISOString();
+            loans[loanIdx].amount_paid = (loans[loanIdx].amount_paid || 0) + currentPayment.amount;
+
+            // Check if all paid
+            const allPaid = loans[loanIdx].schedule.every(s => s.paid);
+            if (allPaid) loans[loanIdx].status = 'completed';
+          }
+        }
+        localStorage.setItem('nexabank_loans', JSON.stringify(loans));
+
+        // Deduct from balance
+        user.balance = (user.balance || 0) - currentPayment.amount;
+        localStorage.setItem('nexabank_session', JSON.stringify(user));
+        updateBalanceDisplay(user.balance);
+
+        // Add transaction
+        const txs = JSON.parse(localStorage.getItem('nexabank_transactions') || '[]');
+        txs.unshift({ id:'tx_'+Date.now(), name:'Loan Repayment', type:'debit', amount:currentPayment.amount, note:`Instalment #${currentPayment.instalment}`, icon:'💳', date:new Date().toISOString() });
+        localStorage.setItem('nexabank_transactions', JSON.stringify(txs));
+
+        closeModal('payModal');
+        btn.textContent = 'Confirm Payment →';
+        btn.disabled = false;
+        currentPayment = null;
+
+        loadMyLoans();
+        loadSchedule();
+        showToast('✅ Payment successful!');
+      }, 1200);
+    }
+
+    function openModal(id) { document.getElementById(id).classList.add('open'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+    document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', function(e) { if(e.target===this) this.classList.remove('open'); }));
+    function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+    function logout() { localStorage.removeItem('nexabank_session'); window.location.href = 'login.html'; }
+  </script>
+</body>
+</html>

@@ -9,7 +9,6 @@
 </head>
 <body>
   <div class="loading-overlay" id="loader"><div class="loader"></div></div>
-
   <div class="auth-page">
     <div class="auth-left">
       <a href="../index.html" class="auth-logo">⬡ NexaBank</a>
@@ -21,51 +20,47 @@
         <div class="auth-feat"><span>🌍</span> Available worldwide</div>
       </div>
     </div>
-
     <div class="auth-right">
       <div class="auth-card">
         <h3>Sign In</h3>
         <p class="auth-sub">Don't have an account? <a href="register.html">Create one free</a></p>
-
-        <div id="loginError" class="error-msg" style="display:none; background: rgba(229,62,62,0.1); padding: 12px 16px; border-radius: 8px; border-left: 3px solid var(--danger); margin-bottom: 16px;"></div>
-
+        <div id="loginError" style="display:none; background:rgba(229,62,62,0.1); padding:12px 16px; border-radius:8px; border-left:3px solid var(--danger); margin-bottom:16px; font-size:13px; color:#FC8181;"></div>
         <div class="form-group">
           <label>Email Address</label>
-          <input type="email" id="email" placeholder="john@example.com"/>
+          <input type="email" id="email" placeholder="john@example.com" onkeydown="if(event.key==='Enter') handleLogin()"/>
           <span class="error-msg" id="emailErr">Please enter a valid email</span>
         </div>
         <div class="form-group">
           <label>Password</label>
           <div class="password-wrap">
-            <input type="password" id="password" placeholder="Enter your password"/>
+            <input type="password" id="password" placeholder="Enter your password" onkeydown="if(event.key==='Enter') handleLogin()"/>
             <button class="toggle-pass" onclick="togglePass('password')">👁</button>
           </div>
           <span class="error-msg" id="passErr">Password is required</span>
         </div>
-
         <div class="form-row">
-          <label class="checkbox-label">
-            <input type="checkbox" id="remember"/> Remember me
-          </label>
+          <label class="checkbox-label"><input type="checkbox" id="remember"/> Remember me</label>
           <a href="#" class="forgot-link">Forgot password?</a>
         </div>
-
-        <button class="btn-gold full-btn" onclick="handleLogin()">Sign In →</button>
-
+        <button class="btn-gold full-btn" id="loginBtn" onclick="handleLogin()">Sign In →</button>
         <div class="divider"><span>or try demo</span></div>
         <button class="btn-outline full-btn" onclick="demoLogin()">Use Demo Account</button>
       </div>
     </div>
   </div>
-
+  <script src="../js/api.js"></script>
   <script src="../js/auth.js"></script>
   <script>
-    // Hide loader after page load
     window.addEventListener('load', () => {
       setTimeout(() => document.getElementById('loader').classList.add('hidden'), 400);
+      // If already logged in redirect
+      if (API.getSession() && API.getToken()) {
+        const s = API.getSession();
+        window.location.href = s.is_admin ? 'admin.html' : 'dashboard.html';
+      }
     });
 
-    function handleLogin() {
+    async function handleLogin() {
       const email = document.getElementById('email').value.trim();
       const password = document.getElementById('password').value;
       let valid = true;
@@ -74,38 +69,26 @@
       document.getElementById('passErr').style.display = 'none';
       document.getElementById('loginError').style.display = 'none';
 
-      if (!email || !email.includes('@')) {
-        document.getElementById('emailErr').style.display = 'block';
-        valid = false;
-      }
-      if (!password) {
-        document.getElementById('passErr').style.display = 'block';
-        valid = false;
-      }
+      if (!email || !email.includes('@')) { document.getElementById('emailErr').style.display = 'block'; valid = false; }
+      if (!password) { document.getElementById('passErr').style.display = 'block'; valid = false; }
       if (!valid) return;
 
-      // Show loading state
-      const btn = document.querySelector('.btn-gold.full-btn');
+      const btn = document.getElementById('loginBtn');
       btn.textContent = 'Signing in...';
       btn.disabled = true;
 
-      // Simulate API call
-      setTimeout(() => {
-        const users = JSON.parse(localStorage.getItem('nexabank_users') || '[]');
-        const user = users.find(u => u.email === email && u.password === btoa(password));
+      const result = await API.login(email, password);
 
-        if (user || (email === 'demo@nexabank.com' && password === 'demo1234')) {
-          const sessionUser = user || { name: 'John Doe', email: 'demo@nexabank.com', id: 'demo_001' };
-          localStorage.setItem('nexabank_session', JSON.stringify(sessionUser));
-          window.location.href = 'dashboard.html';
-        } else {
-          const errEl = document.getElementById('loginError');
-          errEl.textContent = 'Invalid email or password. Try demo@nexabank.com / demo1234';
-          errEl.style.display = 'block';
-          btn.textContent = 'Sign In →';
-          btn.disabled = false;
-        }
-      }, 1000);
+      if (result.ok) {
+        API.saveSession(result.data.token, result.data.user);
+        window.location.href = result.data.user.is_admin ? 'admin.html' : 'dashboard.html';
+      } else {
+        const err = document.getElementById('loginError');
+        err.textContent = '❌ ' + (result.error || 'Invalid email or password');
+        err.style.display = 'block';
+        btn.textContent = 'Sign In →';
+        btn.disabled = false;
+      }
     }
 
     function demoLogin() {
